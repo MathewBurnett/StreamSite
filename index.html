@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Streaming Server | Jagex Ltd.</title>
+
+  <style>
+  #instructions { max-width: 780px; text-align: left; margin: 30px auto; }
+  #instructions textarea { width: 100%; height: 100px; }
+  
+  /* Show the controls (hidden at the start by default) */
+  .video-js .vjs-control-bar { 
+    display: -webkit-box;
+    display: -webkit-flex;
+    display: -ms-flexbox;
+    display: flex;
+  }
+
+  /* Make the demo a little prettier */
+  body {
+    margin-top: 20px;
+    text-align: center; 
+    color: #aaa;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: #000;
+  }
+
+  a, a:hover, a:visited { color: #76DAFF; }
+  </style>
+
+  <link href="video-js.css" rel="stylesheet" type="text/css">
+  <link href="player.css" rel="stylesheet" type="text/css">
+  <script src="video.js"></script>
+
+  <script>
+    videojs.options.flash.swf = "video-js.swf";
+    function changeVideo(value){
+	if(value == "recorded") { 
+      		myPlayer.src = ({"type":"rtmp/mp4", "src":"rtmp://192.168.1.72/vod/test-1445083022.mp4"});
+	}
+	else {
+		myPlayer.src = ({"type":"rtmp/flv", "src":"rtmp://192.168.1.72/exec/test"});
+	}
+    }
+  </script>
+
+
+</head>
+<body>
+<div id="instructions">
+  <video id="myPlayer" class="video-js vjs-default-skin" 
+	poster="jagex.png"
+	controls preload="none" width="780" height="450"
+        data-setup='{ "aspectRatio":"780:450" }'>
+    	<!--<source src="rtmp://172.16.185.150/live/test" type='rtmp/flv' />-->
+	<source src="rtmp://172.16.185.150/vod/test-1445083022.mp4" type='rtmp/mp4' />
+    <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
+  </video>
+</div>
+
+<!-- <select onchange="changeVideo(this.value)">
+  <option value="recorded">Recorded</option>
+  <option value="live">Live</option>
+</select> -->
+
+</body>
+</html>

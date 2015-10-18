@@ -1,0 +1,60 @@
+.video-js {
+  font-size: 10px;
+  color: #fff;
+}
+
+.vjs-default-skin .vjs-big-play-button {
+  font-size: 3em;
+  line-height: 1.5em;
+  height: 1.5em;
+  width: 3em;
+  /* 0.06666em = 2px default */
+  border: 0.06666em solid #fff;
+  /* 0.3em = 9px default */
+  border-radius: 0.3em;
+  /* Align top left. 0.5em = 15px default */
+  left: 44%;
+  top: 70%;
+}
+
+.video-js .vjs-control-bar,
+.video-js .vjs-big-play-button,
+.video-js .vjs-menu-button .vjs-menu-content {
+  /* IE8 - has no alpha support */
+  background-color: #000;
+  /* Opacity: 1.0 = 100%, 0.0 = 0% */
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Slider - used for Volume bar and Progress bar */
+.video-js .vjs-slider {
+  background-color: #545454;
+  background-color: rgba(84, 84, 84, 0.5);
+}
+
+/* The slider bar color is used for the progress bar and the volume bar
+   (the first two can be removed after a fix that's coming) */
+.video-js .vjs-volume-level,
+.video-js .vjs-play-progress,
+.video-js .vjs-slider-bar {
+  background: #fff;
+}
+
+/* The main progress bar also has a bar that shows how much has been loaded. */
+.video-js .vjs-load-progress {
+  /* For IE8 we'll lighten the color */
+  background: ligthen(#545454, 25%);
+  /* Otherwise we'll rely on stacked opacities */
+  background: rgba(84, 84, 84, 0.5);
+}
+
+/* The load progress bar also has internal divs that represent
+   smaller disconnected loaded time ranges */
+.video-js .vjs-load-progress div {
+  /* For IE8 we'll lighten the color */
+  background: ligthen(#545454, 50%);
+  /* Otherwise we'll rely on stacked opacities */
+  background: rgba(84, 84, 84, 0.75);
+}
+
+
