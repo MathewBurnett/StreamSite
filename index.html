@@ -33,14 +33,6 @@
 
   <script>
     videojs.options.flash.swf = "video-js.swf";
-    function changeVideo(value){
-	if(value == "recorded") { 
-      		myPlayer.src = ({"type":"rtmp/mp4", "src":"rtmp://192.168.1.72/vod/test-1445083022.mp4"});
-	}
-	else {
-		myPlayer.src = ({"type":"rtmp/flv", "src":"rtmp://192.168.1.72/exec/test"});
-	}
-    }
   </script>
 
 
@@ -56,11 +48,6 @@
     <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
   </video>
 </div>
-
-<!-- <select onchange="changeVideo(this.value)">
-  <option value="recorded">Recorded</option>
-  <option value="live">Live</option>
-</select> -->
 
 </body>
 </html>
