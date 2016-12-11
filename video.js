@@ -1,4 +1,4 @@
-/**
+**
  * @license
  * Video.js 5.0.0 <http://videojs.com/>
  * Copyright Brightcove, Inc. <https://www.brightcove.com/>
@@ -9511,7 +9511,7 @@ var Player = (function (_Component) {
    *     // get
    *     var whereYouAt = myPlayer.currentTime();
    *     // set
-   *     myPlayer.currentTime(120); // 2 minutes into the video
+   a     myPlayer.currentTime(120); // 2 minutes into the video
    * ```
    *
    * @param  {Number|String=} seconds The time to seek to
@@ -11958,7 +11958,7 @@ var Flash = (function (_Tech) {
 
   Flash.prototype.buffered = function buffered() {
     var ranges = this.el_.vjs_getProperty('buffered');
-    if (ranges.length === 0) {
+    if (ranges.length === 0 || ranges === 0) {
       return _utilsTimeRangesJs.createTimeRange();
     }
     return _utilsTimeRangesJs.createTimeRange(ranges[0][0], ranges[0][1]);
