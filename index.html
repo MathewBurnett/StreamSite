@@ -1,14 +1,20 @@
 <!DOCTYPE html>
-<script>
-        var title           =       "Stream Site";
-        var rtmpPubAddr     =       "x.x.x.x/live";
-        var streamKey       =       "test";
-        var streamType      =       "rtmp/flv";
-        var picture         =       "stream.png";
-</script>
 <html>
 <head>
-  <title>{#title#}</title>
+  <meta charset="utf-8">
+  <title>Stream Site</title>
+
+  <script>
+    // ---- Stream configuration ----
+    // Matches JasonRivers/Docker-nginx-rtmp:
+    //   push to:  rtmp://<hlsHost>/live/<streamKey>
+    //   play via: http://<hlsHost>:<hlsPort>/hls/<streamKey>.m3u8
+    var title      = "Stream Site";
+    var hlsHost    = "localhost";    // IP / hostname of your nginx-rtmp server
+    var hlsPort    = "8080";       // HTTP port the container exposes
+    var streamKey  = "test";       // stream key you publish to /live
+    var picture    = "stream.png"; // poster shown before play
+  </script>
 
   <style>
   #instructions { max-width: 1280px; text-align: left; margin: 30px auto; }
@@ -32,37 +38,82 @@
   }
 
   a, a:hover, a:visited { color: #76DAFF; }
+
+  /* Info box under the video */
+  #info-box {
+    max-width: 1280px;
+    margin: 20px auto 40px;
+    padding: 20px 24px;
+    background: #111;
+    border: 1px solid #222;
+    border-radius: 10px;
+    text-align: center;
+  }
+  #info-box .logo { max-height: 64px; width: auto; margin-bottom: 12px; }
+  #info-box p { margin: 6px 0; line-height: 1.5; color: #ccc; }
+  #unmute-btn {
+    margin-top: 14px;
+    padding: 8px 18px;
+    font-size: 14px;
+    color: #000;
+    background: #76DAFF;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  #unmute-btn:hover { background: #5fc7ef; }
   </style>
 
-  <link href="video-js.css" rel="stylesheet" type="text/css">
+  <link href="video-js.min.css" rel="stylesheet" type="text/css">
   <link href="player.css" rel="stylesheet" type="text/css">
-  <script src="video.js"></script>
-
-  <script>
-    videojs.options.flash.swf = "video-js.swf";
-  </script>
-
-
+  <script src="video.min.js"></script>
 </head>
 <body>
 <div id="instructions">
-  <video id="myPlayer" class="video-js vjs-default-skin" 
-        poster="{#picture#}"
-        controls preload="none" width="1280" height="720"
-        data-setup='{ "aspectRatio":"780:450" }'>
-        <source src="rtmp://{#rtmpPubAddr#}/{#streamKey#}" type='{#streamType#}' />
-    <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="http://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
+  <video id="myPlayer" class="video-js vjs-default-skin"
+        poster="stream.png"
+        controls autoplay muted preload="auto" width="1280" height="720"
+        data-setup='{ "aspectRatio":"16:9", "liveui": true, "autoplay": "muted", "muted": true }'>
+    <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
   </video>
+</div>
+
+<div id="info-box">
+  <img class="logo" src="logo.png" alt="Logo" onerror="this.style.display='none'">
+  <p><strong>The stream starts muted.</strong></p>
+  <p>Use the volume control in the player &mdash; or the button below &mdash; to turn on sound.</p>
+  <button id="unmute-btn" type="button">&#128266; Unmute</button>
 </div>
 
 </body>
 </html>
 <script>
-        document.title = title;
-        var video = document.getElementsByTagName("video")[0];
-        video.setAttribute("poster", picture);
+  document.title = title;
 
-        var source = document.getElementsByTagName("source")[0];
-        source.setAttribute("src", "rtmp://" + rtmpPubAddr + "/" + streamKey);
-        source.setAttribute("type", streamType);
+  var hlsUrl = "http://" + hlsHost + ":" + hlsPort + "/hls/" + streamKey + ".m3u8";
+
+  var player = videojs("myPlayer");
+  player.poster(picture);
+  player.src({ src: hlsUrl, type: "application/x-mpegURL" });
+
+  // Browsers only allow autoplay when muted. Mute, then try to play;
+  // if the browser still blocks it, the controls remain for manual start.
+  player.ready(function () {
+    player.muted(true);
+    var attempt = player.play();
+    if (attempt && typeof attempt.catch === "function") {
+      attempt.catch(function () { /* autoplay blocked; user can press play */ });
+    }
+  });
+
+  // Unmute button in the info box: toggles sound and stays in sync with the player.
+  var unmuteBtn = document.getElementById("unmute-btn");
+  function syncUnmuteBtn() {
+    unmuteBtn.innerHTML = player.muted() ? "&#128266; Unmute" : "&#128263; Mute";
+  }
+  unmuteBtn.addEventListener("click", function () {
+    player.muted(!player.muted());
+  });
+  player.on("volumechange", syncUnmuteBtn);
+  player.ready(syncUnmuteBtn);
 </script>
