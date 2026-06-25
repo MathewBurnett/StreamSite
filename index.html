@@ -17,8 +17,34 @@
   </script>
 
   <style>
-  #instructions { max-width: 1280px; text-align: left; margin: 30px auto; }
+  #instructions { max-width: 1280px; text-align: left; margin: 30px auto; position: relative; }
   #instructions textarea { width: 100%; height: 100px; }
+
+  /* "Stream offline" overlay shown when nothing is being published */
+  #offline {
+    position: absolute;
+    inset: 0;
+    display: none; /* toggled to flex by JS */
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.75);
+    color: #eee;
+    font-size: 20px;
+    text-align: center;
+    z-index: 2;
+    pointer-events: none;
+  }
+  #offline .spinner {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 16px;
+    border: 4px solid rgba(255, 255, 255, 0.25);
+    border-top-color: #76DAFF;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Show the controls (hidden at the start by default) */
   .video-js .vjs-control-bar {
@@ -56,7 +82,7 @@
     padding: 8px 18px;
     font-size: 14px;
     color: #000;
-    background: #76DAFF;
+    background: #cd76ff;
     border: none;
     border-radius: 6px;
     cursor: pointer;
@@ -76,6 +102,10 @@
         data-setup='{ "aspectRatio":"16:9", "liveui": true, "autoplay": "muted", "muted": true }'>
     <p class="vjs-no-js">To view this video please enable JavaScript, and consider upgrading to a web browser that <a href="https://videojs.com/html5-video-support/" target="_blank">supports HTML5 video</a></p>
   </video>
+  <div id="offline">
+    <div class="spinner"></div>
+    <div>Stream is offline &mdash; waiting for it to start&hellip;</div>
+  </div>
 </div>
 
 <div id="info-box">
@@ -94,16 +124,74 @@
 
   var player = videojs("myPlayer");
   player.poster(picture);
-  player.src({ src: hlsUrl, type: "application/x-mpegURL" });
 
-  // Browsers only allow autoplay when muted. Mute, then try to play;
-  // if the browser still blocks it, the controls remain for manual start.
-  player.ready(function () {
-    player.muted(true);
+  var hlsSource  = { src: hlsUrl, type: "application/x-mpegURL" };
+  var offlineEl  = document.getElementById("offline");
+  var POLL_MS    = 3000;   // how often to check the stream
+  var STALE_MS   = 12000;  // playlist unchanged this long => treat as offline
+  var MAX_AGE_MS = 30000;  // playlist file older than this => treat as offline
+
+  var live         = false; // is a stream currently loaded/playing?
+  var lastPlaylist = "";    // last seen .m3u8 body
+  var lastChange   = 0;     // when the playlist last changed
+
+  function showOffline() {
+    if (live) { player.reset(); }   // stop & clear a stream that has ended
+    live = false;
+    player.poster(picture);
+    offlineEl.style.display = "flex";
+  }
+
+  function goLive() {
+    if (live) return;               // already playing
+    live = true;
+    offlineEl.style.display = "none";
+    player.src(hlsSource);
+    player.muted(true);             // muted so the browser allows autoplay
     var attempt = player.play();
     if (attempt && typeof attempt.catch === "function") {
       attempt.catch(function () { /* autoplay blocked; user can press play */ });
     }
+  }
+
+  // Poll the HLS playlist. It only goes live when the playlist actually
+  // advances (new fragments), so a stopped-but-not-yet-removed playlist is
+  // correctly detected as offline once it stops changing.
+  function checkStream() {
+    var ageMs = 0;
+    fetch(hlsUrl + "?_=" + Date.now(), { cache: "no-store" })
+      .then(function (res) {
+        if (!res.ok) throw new Error("offline");
+        var lm = res.headers.get("Last-Modified");
+        if (lm) { ageMs = Date.now() - new Date(lm).getTime(); }
+        return res.text();
+      })
+      .then(function (text) {
+        if (text.indexOf("#EXTINF") === -1) { showOffline(); return; }
+        // Playlist file hasn't been written recently => stream has stopped.
+        if (ageMs > MAX_AGE_MS) { showOffline(); return; }
+        if (text !== lastPlaylist) {
+          lastPlaylist = text;
+          lastChange = Date.now();
+          goLive();
+        } else if (Date.now() - lastChange > STALE_MS) {
+          showOffline();
+        }
+      })
+      .catch(function () { showOffline(); });
+  }
+
+  // If the stream drops mid-play, Video.js raises an error; fall back to
+  // the waiting state and let polling pick it back up.
+  player.on("error", function () {
+    player.error(null);
+    showOffline();
+  });
+
+  player.ready(function () {
+    showOffline();   // start in the waiting state
+    checkStream();
+    setInterval(checkStream, POLL_MS);
   });
 
   // Unmute button in the info box: toggles sound and stays in sync with the player.
