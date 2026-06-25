@@ -5,7 +5,8 @@
   <title>Stream Site</title>
 
   <script>
-    // ---- Stream configuration ----
+    // ---- Stream configuration (fallback defaults) ----
+    // These are overridden at load time by variables.conf if it is present.
     // Matches JasonRivers/Docker-nginx-rtmp:
     //   push to:  rtmp://<hlsHost>/live/<streamKey>
     //   play via: http://<hlsHost>:<hlsPort>/hls/<streamKey>.m3u8
@@ -188,11 +189,43 @@
     showOffline();
   });
 
-  player.ready(function () {
-    showOffline();   // start in the waiting state
-    checkStream();
-    setInterval(checkStream, POLL_MS);
-  });
+  // ---- variables.conf is the source of truth; it overrides the inline defaults ----
+  function parseConf(text) {
+    var cfg = {};
+    text.split(/\r?\n/).forEach(function (line) {
+      line = line.trim();
+      if (!line || line.charAt(0) === "#") return;       // skip blanks/comments
+      var eq = line.indexOf("=");
+      if (eq === -1) return;
+      var key = line.slice(0, eq).trim();
+      var val = line.slice(eq + 1).trim().replace(/^["']|["']$/g, ""); // strip quotes
+      if (key) cfg[key] = val;
+    });
+    return cfg;
+  }
+
+  function start(cfg) {
+    document.title = cfg.title     || title;
+    picture        = cfg.picture   || picture;
+    var host       = cfg.hlsHost   || hlsHost;
+    var port       = cfg.hlsPort   || hlsPort;
+    var key        = cfg.streamKey || streamKey;
+    hlsUrl    = "http://" + host + ":" + port + "/hls/" + key + ".m3u8";
+    hlsSource = { src: hlsUrl, type: "application/x-mpegURL" };
+
+    player.ready(function () {
+      player.poster(picture);
+      showOffline();   // start in the waiting state
+      checkStream();
+      setInterval(checkStream, POLL_MS);
+    });
+  }
+
+  // Load the config, then start. If it can't be read, fall back to inline defaults.
+  fetch("variables.conf?_=" + Date.now(), { cache: "no-store" })
+    .then(function (res) { if (!res.ok) throw new Error("no conf"); return res.text(); })
+    .then(function (text) { start(parseConf(text)); })
+    .catch(function () { start({}); });
 
   // Unmute button in the info box: toggles sound and stays in sync with the player.
   var unmuteBtn = document.getElementById("unmute-btn");
