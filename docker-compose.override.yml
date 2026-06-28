@@ -1,0 +1,10 @@
+# Local development overrides. docker compose merges this on top of
+# docker-compose.yml automatically, so `docker compose up --build` builds the
+# image from source instead of pulling it from GHCR.
+#
+# This file is NOT copied to the deploy host (which only pulls the image).
+services:
+  stream:
+    build: .
+    image: ${IMAGE:-streamsite:local}
+    pull_policy: build

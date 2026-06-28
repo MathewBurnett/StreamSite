@@ -1,0 +1,5 @@
+# Local environment / secrets — keep .env.example, ignore the real thing.
+.env
+
+# Generated into the web root at container startup (from environment vars).
+www/variables.conf

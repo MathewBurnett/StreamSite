@@ -3,17 +3,24 @@
 <head>
   <meta charset="utf-8">
   <title>Stream Site</title>
+  <!-- Assets resolve from the site root so the page works when served at
+       /<stream_key> (any path depth), not just at /. -->
+  <base href="/">
 
   <script>
     // ---- Stream configuration (fallback defaults) ----
     // These are overridden at load time by variables.conf if it is present.
-    // Matches JasonRivers/Docker-nginx-rtmp:
-    //   push to:  rtmp://<hlsHost>/live/<streamKey>
-    //   play via: http://<hlsHost>:<hlsPort>/hls/<streamKey>.m3u8
+    // Matches the bundled nginx-rtmp server (this same container):
+    //   push to:  rtmp://<this-host>:1935  with stream key <streamKey>
+    //   play via: /hls/<streamKey>.m3u8  (served from the same origin)
+    //
+    // Leave hlsHost empty to play HLS from the same origin that served this
+    // page (the single-container setup). Set it to a host/port only if the
+    // stream is served by a separate machine.
     var title      = "Stream Site";
-    var hlsHost    = "localhost";    // IP / hostname of your nginx-rtmp server
-    var hlsPort    = "8080";       // HTTP port the container exposes
-    var streamKey  = "test";       // stream key you publish to /live
+    var hlsHost    = "";           // empty => same origin as this page
+    var hlsPort    = "8080";       // only used when hlsHost is set
+    var streamKey  = "live";       // stream key you publish to /live
     var picture    = "stream.png"; // poster shown before play
   </script>
 
@@ -121,7 +128,24 @@
 <script>
   document.title = title;
 
-  var hlsUrl = "http://" + hlsHost + ":" + hlsPort + "/hls/" + streamKey + ".m3u8";
+  // Build the HLS playlist URL. With an empty host we stay on the same origin
+  // as this page (single-container setup); otherwise we target host:port.
+  function buildHlsUrl(host, port, key) {
+    if (!host) return "/hls/" + key + ".m3u8";
+    return "http://" + host + ":" + port + "/hls/" + key + ".m3u8";
+  }
+
+  // A stream key can be selected by the URL path, e.g. /<stream_key>. The first
+  // path segment wins, unless it's empty (the root) or looks like a real file
+  // (has a dot, e.g. /index.html) or contains unsafe characters.
+  function streamKeyFromPath() {
+    var seg = location.pathname.replace(/^\/+|\/+$/g, "").split("/")[0];
+    seg = decodeURIComponent(seg || "");
+    if (!seg || !/^[A-Za-z0-9_-]+$/.test(seg)) return "";
+    return seg;
+  }
+
+  var hlsUrl = buildHlsUrl(hlsHost, hlsPort, streamKey);
 
   var player = videojs("myPlayer");
   player.poster(picture);
@@ -205,12 +229,18 @@
   }
 
   function start(cfg) {
-    document.title = cfg.title     || title;
-    picture        = cfg.picture   || picture;
-    var host       = cfg.hlsHost   || hlsHost;
+    // hlsHost may legitimately be empty (same origin), so only fall back to the
+    // default when the key is missing from the config entirely.
+    var host       = cfg.hlsHost   === undefined ? hlsHost : cfg.hlsHost;
     var port       = cfg.hlsPort   || hlsPort;
-    var key        = cfg.streamKey || streamKey;
-    hlsUrl    = "http://" + host + ":" + port + "/hls/" + key + ".m3u8";
+    // The URL path (/<stream_key>) takes precedence over the configured default.
+    var pathKey    = streamKeyFromPath();
+    var key        = pathKey || cfg.streamKey || streamKey;
+
+    var baseTitle  = cfg.title || title;
+    document.title = pathKey ? baseTitle + " — " + pathKey : baseTitle;
+    picture        = cfg.picture   || picture;
+    hlsUrl    = buildHlsUrl(host, port, key);
     hlsSource = { src: hlsUrl, type: "application/x-mpegURL" };
 
     player.ready(function () {

@@ -1,0 +1,26 @@
+# Deployment compose: pulls the prebuilt image from GHCR and reads config from
+# .env. Copy this file plus a populated .env to the deploy host, then:
+#
+#   docker compose pull
+#   docker compose up -d
+#
+# For local development that builds from source instead of pulling, the
+# docker-compose.override.yml in this repo is merged in automatically:
+#
+#   docker compose up --build
+services:
+  stream:
+    image: ${IMAGE:-ghcr.io/mathewburnett/streamsite:latest}
+    container_name: streamsite
+    restart: unless-stopped
+    env_file:
+      - path: .env
+        required: false
+    ports:
+      - "${WEB_PORT:-80}:80"        # website + HLS playback on port 80
+      - "${HTTP_PORT:-8080}:8080"   # website + HLS playback on port 8080
+      - "${RTMP_PORT:-1935}:1935"   # RTMP ingest
+    volumes:
+      # Web root. Seeded from the image on first start; edit files here (e.g.
+      # swap the stream poster) and they persist across restarts.
+      - "${WWW_DIR:-./www}:/opt/nginx/html"
